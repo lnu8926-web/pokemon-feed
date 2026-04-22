@@ -53,7 +53,10 @@ export function PokemonList({ searchQuery }: PokemonListProps) {
         }),
       );
 
-      setPokemonList((prev) => [...prev, ...details]);
+      setPokemonList((prev) => {
+        const existingIds = new Set(prev.map((p) => p.id));
+        return [...prev, ...details.filter((d) => !existingIds.has(d.id))];
+      });
       hasNextRef.current = !!data.next;
       offsetRef.current += LIMIT;
     } catch (error) {
