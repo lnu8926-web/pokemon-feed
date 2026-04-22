@@ -11,11 +11,22 @@ interface PokemonListProps {
 
 export function PokemonList({ searchQuery }: PokemonListProps) {
   const [pokemonList, setPokemonList] = useState<Pokemon[]>([]);
+  const [allNames, setAllNames] = useState<{ name: string; url: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const offsetRef = useRef(0);
   const hasNextRef = useRef(true);
 
   const { ref, isIntersecting } = useIntersectionObserver({ threshold: 1.0 });
+
+  // 전체 이름 목록 초기 로딩
+  useEffect(() => {
+    const fetchAllNames = async () => {
+      const res = await fetch("https://pokeapi.co/api/v2/pokemon?limit=1000");
+      const data: PokemonListResponse = await res.json();
+      setAllNames(data.results);
+    };
+    fetchAllNames();
+  }, []);
 
   const fetchPokemonList = async () => {
     if (loading || !hasNextRef.current) return;
@@ -35,7 +46,9 @@ export function PokemonList({ searchQuery }: PokemonListProps) {
             id: detailData.id,
             name: detailData.name,
             image: detailData.sprites.front_default,
-            types: detailData.types.map((t: { type: { name: string } }) => t.type.name),
+            types: detailData.types.map(
+              (t: { type: { name: string } }) => t.type.name,
+            ),
           };
         }),
       );
@@ -62,9 +75,47 @@ export function PokemonList({ searchQuery }: PokemonListProps) {
     }
   }, [isIntersecting]);
 
-  const filtered = searchQuery
-    ? pokemonList.filter((p) => p.name.includes(searchQuery.toLowerCase()))
-    : pokemonList;
+  // 검색어 있으면 전체 이름 목록에서 필터링 후 상세 정보 조회
+  const [searchResults, setSearchResults] = useState<Pokemon[]>([]);
+
+  useEffect(() => {
+    if (!searchQuery) {
+      return;
+    }
+
+    const filtered = allNames.filter((p) =>
+      p.name.includes(searchQuery.toLowerCase()),
+    );
+
+    const fetchDetails = async () => {
+      setLoading(true);
+      try {
+        const details = await Promise.all(
+          filtered.slice(0, 20).map(async (p) => {
+            const detail = await fetch(p.url);
+            const detailData = await detail.json();
+            return {
+              id: detailData.id,
+              name: detailData.name,
+              image: detailData.sprites.front_default,
+              types: detailData.types.map(
+                (t: { type: { name: string } }) => t.type.name,
+              ),
+            };
+          }),
+        );
+        setSearchResults(details);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDetails();
+  }, [searchQuery, allNames]);
+
+  const displayed = searchQuery ? searchResults : pokemonList;
 
   return (
     <div>
@@ -76,17 +127,19 @@ export function PokemonList({ searchQuery }: PokemonListProps) {
           padding: "1rem",
         }}
       >
-        {filtered.map((pokemon) => (
+        {displayed.map((pokemon) => (
           <PokemonCard key={pokemon.id} pokemon={pokemon} />
         ))}
       </div>
 
       {loading && <p style={{ textAlign: "center" }}>로딩 중...</p>}
 
-      <div
-        ref={ref as React.RefObject<HTMLDivElement>}
-        style={{ height: "20px" }}
-      />
+      {!searchQuery && (
+        <div
+          ref={ref as React.RefObject<HTMLDivElement>}
+          style={{ height: "20px" }}
+        />
+      )}
     </div>
   );
 }
