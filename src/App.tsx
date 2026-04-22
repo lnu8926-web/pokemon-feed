@@ -15,22 +15,35 @@ function App() {
   }, []);
 
   return (
-    <div>
-      <h1
+    <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 1rem" }}>
+      <header
         style={{
-          textAlign: "center",
-          padding: "1rem",
           position: "sticky",
           top: 0,
-          background: "#fff",
           zIndex: 10,
+          background: "#000000",
+          borderRadius: "0 0 20px 20px",
+          padding: "1rem 2rem",
           boxShadow:
-            throttledScrollY > 0 ? "0 2px 8px rgba(0,0,0,0.1)" : "none",
+            throttledScrollY > 0 ? "0 4px 20px rgba(0,0,0,0.1)" : "none",
           transition: "box-shadow 0.3s",
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
         }}
       >
-        포켓몬 도감
-      </h1>
+        <h1
+          style={{
+            fontFamily: "'Nunito', sans-serif",
+            fontSize: "22px",
+            fontWeight: 800,
+            color: "#ffffff",
+          }}
+        >
+          포켓몬 도감
+        </h1>
+      </header>
+
       <SearchBar onSearch={setSearchQuery} />
       <PokemonList searchQuery={searchQuery} />
     </div>

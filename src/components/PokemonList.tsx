@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useEffectEvent } from "react";
 import type { Pokemon, PokemonListResponse } from "../types/pokemon";
 import { useIntersectionObserver } from "../hooks/useIntersectionObserver";
 import { PokemonCard } from "./PokemonCard";
@@ -12,9 +12,11 @@ interface PokemonListProps {
 export function PokemonList({ searchQuery }: PokemonListProps) {
   const [pokemonList, setPokemonList] = useState<Pokemon[]>([]);
   const [allNames, setAllNames] = useState<{ name: string; url: string }[]>([]);
+  const [searchResults, setSearchResults] = useState<Pokemon[]>([]);
   const [loading, setLoading] = useState(false);
   const offsetRef = useRef(0);
   const hasNextRef = useRef(true);
+  const loadingRef = useRef(false);
 
   const { ref, isIntersecting } = useIntersectionObserver({ threshold: 1.0 });
 
@@ -28,8 +30,10 @@ export function PokemonList({ searchQuery }: PokemonListProps) {
     fetchAllNames();
   }, []);
 
-  const fetchPokemonList = async () => {
-    if (loading || !hasNextRef.current) return;
+  const fetchPokemonList = useEffectEvent(async () => {
+    if (loadingRef.current || !hasNextRef.current || searchQuery) return;
+
+    loadingRef.current = true;
     setLoading(true);
 
     try {
@@ -55,16 +59,17 @@ export function PokemonList({ searchQuery }: PokemonListProps) {
 
       setPokemonList((prev) => {
         const existingIds = new Set(prev.map((p) => p.id));
-        return [...prev, ...details.filter((d) => !existingIds.has(d.id))];
+        return [...prev, ...details.filter((p) => !existingIds.has(p.id))];
       });
       hasNextRef.current = !!data.next;
       offsetRef.current += LIMIT;
     } catch (error) {
       console.error(error);
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
-  };
+  });
 
   // 초기 로딩
   useEffect(() => {
@@ -78,9 +83,7 @@ export function PokemonList({ searchQuery }: PokemonListProps) {
     }
   }, [isIntersecting]);
 
-  // 검색어 있으면 전체 이름 목록에서 필터링 후 상세 정보 조회
-  const [searchResults, setSearchResults] = useState<Pokemon[]>([]);
-
+  // 검색어 변경 시 결과 초기화 + 검색 실행
   useEffect(() => {
     if (!searchQuery) {
       return;
@@ -92,6 +95,7 @@ export function PokemonList({ searchQuery }: PokemonListProps) {
 
     const fetchDetails = async () => {
       setLoading(true);
+      setSearchResults([]);
       try {
         const details = await Promise.all(
           filtered.slice(0, 20).map(async (p) => {
@@ -125,7 +129,7 @@ export function PokemonList({ searchQuery }: PokemonListProps) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
           gap: "1rem",
           padding: "1rem",
         }}
@@ -135,7 +139,9 @@ export function PokemonList({ searchQuery }: PokemonListProps) {
         ))}
       </div>
 
-      {loading && <p style={{ textAlign: "center" }}>로딩 중...</p>}
+      {loading && (
+        <p style={{ textAlign: "center", padding: "1rem" }}>로딩 중...</p>
+      )}
 
       {!searchQuery && (
         <div
