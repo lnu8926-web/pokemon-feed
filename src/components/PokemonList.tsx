@@ -136,12 +136,10 @@ export function PokemonList({ searchQuery }: PokemonListProps) {
         <p style={{ textAlign: "center", padding: "1rem" }}>로딩 중...</p>
       )}
 
-      {!searchQuery && (
-        <div
-          ref={ref as React.RefObject<HTMLDivElement>}
-          style={{ height: "20px" }}
-        />
-      )}
+      <div
+        ref={ref as React.RefObject<HTMLDivElement>}
+        style={{ height: "20px" }}
+      />
     </div>
   );
 }
