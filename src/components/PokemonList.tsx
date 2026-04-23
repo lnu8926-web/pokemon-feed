@@ -61,6 +61,16 @@ export function PokemonList({ searchQuery }: PokemonListProps) {
 
   const { ref } = useIntersectionObserver(fetchPokemonList, { threshold: 0 });
 
+  // 배치 로드 후 sentinel이 여전히 뷰포트 안에 있으면 추가 로드
+  useEffect(() => {
+    if (loading || searchQuery || !hasNextRef.current) return;
+    if (!ref.current) return;
+    const rect = (ref.current as HTMLElement).getBoundingClientRect();
+    if (rect.top < window.innerHeight) {
+      fetchPokemonList();
+    }
+  }, [pokemonList.length, loading, searchQuery, fetchPokemonList, ref]);
+
   // 전체 이름 목록 초기 로딩
   useEffect(() => {
     const fetchAllNames = async () => {
