@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useEffectEvent } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { Pokemon, PokemonListResponse } from "../types/pokemon";
 import { useIntersectionObserver } from "../hooks/useIntersectionObserver";
 import { PokemonCard } from "./PokemonCard";
@@ -18,19 +18,7 @@ export function PokemonList({ searchQuery }: PokemonListProps) {
   const hasNextRef = useRef(true);
   const loadingRef = useRef(false);
 
-  const { ref, isIntersecting } = useIntersectionObserver({ threshold: 1.0 });
-
-  // 전체 이름 목록 초기 로딩
-  useEffect(() => {
-    const fetchAllNames = async () => {
-      const res = await fetch("https://pokeapi.co/api/v2/pokemon?limit=1000");
-      const data: PokemonListResponse = await res.json();
-      setAllNames(data.results);
-    };
-    fetchAllNames();
-  }, []);
-
-  const fetchPokemonList = useEffectEvent(async () => {
+  const fetchPokemonList = useCallback(async () => {
     if (loadingRef.current || !hasNextRef.current || searchQuery) return;
 
     loadingRef.current = true;
@@ -69,19 +57,24 @@ export function PokemonList({ searchQuery }: PokemonListProps) {
       loadingRef.current = false;
       setLoading(false);
     }
-  });
+  }, [searchQuery]);
+
+  const { ref } = useIntersectionObserver(fetchPokemonList, { threshold: 0 });
+
+  // 전체 이름 목록 초기 로딩
+  useEffect(() => {
+    const fetchAllNames = async () => {
+      const res = await fetch("https://pokeapi.co/api/v2/pokemon?limit=1000");
+      const data: PokemonListResponse = await res.json();
+      setAllNames(data.results);
+    };
+    fetchAllNames();
+  }, []);
 
   // 초기 로딩
   useEffect(() => {
     fetchPokemonList();
-  }, []);
-
-  // 무한스크롤 트리거
-  useEffect(() => {
-    if (isIntersecting) {
-      fetchPokemonList();
-    }
-  }, [isIntersecting]);
+  }, [fetchPokemonList]);
 
   // 검색어 변경 시 결과 초기화 + 검색 실행
   useEffect(() => {
